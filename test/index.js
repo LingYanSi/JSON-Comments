@@ -8,17 +8,15 @@ console.log(
     "num": 1,
     "isLove": false,
     "info": null,
-    "obj": {
-        "flow": {
-
-        }
-    },
+    "obj": [ // 
+        "111" // [[random]]
+    ],
     // 神经了吗？
-    "list": [ // [[10[[]]
+    "list": [ // 11111[[11]]
         {
             "tiny": 1.222, // [[random|100]]
-            "content": "", // [[random]]
             "age": 18,
+            "id": 1, // [[+]]
         }
     ]
 }

@@ -552,14 +552,8 @@ function ast() {
 
 var getComments = function getComments(item) {
   return item.comments.map(function (i) {
-    return i.value.split('\n').filter(function (i) {
-      return i.trim();
-    }) // 过滤空白
-    .map(function (item) {
-      return '`' + item + '`';
-    }) // 添加inline-code包裹，避免关键字
-    .join('<br />'); // 换行转 <br>
-  }).join('<br />');
+    return i.value;
+  }).join('\n');
 }; // 获取当前节点的值
 
 
@@ -599,13 +593,14 @@ function toJSON(str) {
     return /^\d+$/.test(any);
   }
 
-  function run(ast$$1, keyValueNode) {
+  function run(ast$$1, keyValueNode, currentIndex) {
     var comment = getComments(keyValueNode || ast$$1);
 
-    var _getMatchResult3 = getMatchResult(comment, '[[', ']]'),
-        _getMatchResult4 = _slicedToArray(_getMatchResult3, 3),
-        _getMatchResult4$ = _getMatchResult4[2],
-        tiaojian = _getMatchResult4$ === void 0 ? '' : _getMatchResult4$;
+    var _ref11 = comment.match(/\[{2}(.+)\]{2}/) || [],
+        _ref12 = _slicedToArray(_ref11, 2),
+        _ref12$ = _ref12[1],
+        tiaojian = _ref12$ === void 0 ? '' : _ref12$; // 获取表达式
+
 
     var conditions = tiaojian.trim() ? tiaojian.split('|').map(function (i) {
       return i.trim();
@@ -624,7 +619,15 @@ function toJSON(str) {
 
           if (type === 'random') {
             var repeat = Math.round(Math.random() * 30 + 1);
-            return '我是随机string'.repeat(repeat);
+            return '我是随机string1234'.repeat(repeat);
+          }
+
+          if (type === 'img') {
+            return uuid();
+          }
+
+          if (type === '+' && currentIndex !== undefined) {
+            return "".concat(currentIndex);
           }
 
           if (type === 'id') {
@@ -644,43 +647,51 @@ function toJSON(str) {
             return Math.round(Number(maxNum) * Math.random());
           }
 
+          if (_type === '+' && currentIndex !== undefined) {
+            console.log(currentIndex);
+            return currentIndex;
+          }
+
           return Number(ast$$1.value.raw);
         }
 
       case 'bool':
         {
+          var _conditions3 = _slicedToArray(conditions, 1),
+              _type2 = _conditions3[0];
+
+          if (_type2 === 'random') {
+            return Math.random() > .5 ? false : true;
+          }
+
           return ast$$1.value.raw === 'false' ? false : true;
         }
 
       case 'array':
         {
-          var _conditions3 = _slicedToArray(conditions, 2),
-              _type2 = _conditions3[0],
-              _maxNum = _conditions3[1];
+          var _conditions4 = _slicedToArray(conditions, 2),
+              _type3 = _conditions4[0],
+              _maxNum = _conditions4[1];
 
           if (!ast$$1.children.length) {
             return [];
           }
 
-          if (_type2 === 'random' && isNum(_maxNum)) {
+          var arr = ast$$1.children;
+
+          if (_type3 === 'random' && isNum(_maxNum)) {
             var repeatNum = Math.round(Number(_maxNum) * Math.random());
-            return Array.from({
+            arr = Array.from({
               length: repeatNum
-            }).fill(ast$$1.children[0]).map(function (item) {
-              return run(item.value);
-            });
+            }).fill(ast$$1.children[0]);
+          } else if (isNum(_type3)) {
+            arr = Array.from({
+              length: Number(_type3)
+            }).fill(ast$$1.children[0]);
           }
 
-          if (isNum(_type2)) {
-            return Array.from({
-              length: Number(_type2)
-            }).fill(ast$$1.children[0]).map(function (item) {
-              return run(item.value);
-            });
-          }
-
-          return ast$$1.children.map(function (item) {
-            return run(item.value);
+          return arr.map(function (item, index) {
+            return run(item.value, item, index);
           });
         }
 
@@ -688,7 +699,7 @@ function toJSON(str) {
         {
           var obj = {};
           ast$$1.children.map(function (item) {
-            obj[item.key.value] = run(item.value, item);
+            obj[item.key.value] = run(item.value, item, currentIndex);
           });
           return obj;
         }
@@ -700,13 +711,25 @@ function toJSON(str) {
   return run(astResult);
 }
 
+var getComments$1 = function getComments$1(item) {
+  return item.comments.map(function (i) {
+    return i.value.split('\n').filter(function (i) {
+      return i.trim();
+    }) // 过滤空白
+    .map(function (item) {
+      return '`' + item + '`';
+    }) // 添加inline-code包裹，避免关键字
+    .join('<br />'); // 换行转 <br>
+  }).join('<br />');
+};
+
 function toReadme(str, option) {
   function run(ast$$1, add) {
     var indent = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
 
     if (ast$$1.type === 'object') {
       ast$$1.children.forEach(function (item) {
-        add("\n| ".concat("&nbsp".repeat(indent)).concat(item.key.value, " | ").concat(getType(item.value), " | `").concat(getValue(item.value) || ' ', "` | ").concat(getComments(item), " |"));
+        add("\n| ".concat("&nbsp".repeat(indent)).concat(item.key.value, " | ").concat(getType(item.value), " | `").concat(getValue(item.value) || ' ', "` | ").concat(getComments$1(item), " |"));
         run(item.value, add, indent + 4);
       });
     }
@@ -717,7 +740,7 @@ function toReadme(str, option) {
       if (item) {
         var node = item.value;
         var officialComment = 'Notice: 您只需要给数组的第一个元素添加注释';
-        add("\n|".concat('&nbsp'.repeat(indent), " 0 | ").concat(node.type, " | ").concat(getValue(node), " | ").concat(getComments(item) || officialComment, "|"));
+        add("\n|".concat('&nbsp'.repeat(indent), " 0 | ").concat(node.type, " | ").concat(getValue(node), " | ").concat(getComments$1(item) || officialComment, "|"));
         run(node, add, indent + 4);
       }
     }
@@ -746,7 +769,6 @@ function testComments(str, option) {
       case 'array':
         {
           if (ast$$1.children.length == 0) {
-            console.log(ast$$1);
             throw new Error("".concat(key, "\u6570\u7EC4\u4E0D\u80FD\u4E3A\u7A7A"));
           }
 

@@ -1,5 +1,13 @@
 import { ast, tokenizer, getMatchResult } from './parser'
-import { getType, getComments, getValue } from './util'
+import { getType, getValue } from './util'
+
+const getComments = (item) => item.comments.map(i => {
+    return i.value
+        .split('\n')
+        .filter(i => i.trim()) // 过滤空白
+        .map(item => '`' + item + '`') // 添加inline-code包裹，避免关键字
+        .join('<br />') // 换行转 <br>
+}).join('<br />')
 
 export function toReadme(str, option) {
     function run(ast, add, indent = 0) {

@@ -1815,10 +1815,10 @@ rimraf@^2.6.1:
   dependencies:
     glob "^7.0.5"
 
-rollup@^0.67.4:
-  version "0.67.4"
-  resolved "https://registry.npmjs.org/rollup/-/rollup-0.67.4.tgz#8ed6b0993337f84ec8a0387f824fa6c197e833ec"
-  integrity sha512-AVuP73mkb4BBMUmksQ3Jw0jTrBTU1i7rLiUYjFxLZGb3xiFmtVEg40oByphkZAsiL0bJC3hRAJUQos/e5EBd+w==
+rollup@^0.68.1:
+  version "0.68.1"
+  resolved "http://registry.npm.taobao.org/rollup/download/rollup-0.68.1.tgz#40d03872d3b05848fb023b12ebf7c6d69cab84c5"
+  integrity sha1-QNA4ctOwWEj7AjsS6/fG1pyrhMU=
   dependencies:
     "@types/estree" "0.0.39"
     "@types/node" "*"

@@ -10,7 +10,6 @@ export function testComments(str, option) {
         switch (ast.type) {
             case 'array': {
                 if (ast.children.length == 0) {
-                    console.log(ast)
                     throw new Error(`${key}数组不能为空`)
                 }
                 return ast.children.every(item => {

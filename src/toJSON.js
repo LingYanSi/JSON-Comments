@@ -3,8 +3,8 @@ import { getType, getComments, getValue } from './util'
 
 function uuid(len = 8) {
     const S = 'qwertyuioopasdfghjklzxcvbnmQWERTYUIOOPASDFGHJKLZXCVBNM0123456789';
-    const LEN = S.length - 1;
-    return ' '.repeat(len).split('').map(() => S[Math.round(Math.random() * LEN)]).join('');
+    const LEN = S.length;
+    return ' '.repeat(len).split('').map(() => S[Math.floor(Math.random() * LEN)]).join('');
 }
 
 // 字符串转JSON
@@ -13,9 +13,15 @@ export function toJSON(str) {
         return /^\d+$/.test(any)
     }
 
-    function run(ast, keyValueNode) {
+    /**
+     * @param {*} ast
+     * @param {*} keyValueNode 指对象中的每个keyValue节点，对象上这个字段的注释应该从keyValueNode的comments上读取
+     * @param {number} currentIndex 当前元素在数组中的位置
+     * @returns
+     */
+    function run(ast, keyValueNode, currentIndex) {
         const comment = getComments(keyValueNode || ast)
-        const [,,tiaojian = ''] = getMatchResult(comment, '[[', ']]')
+        const [,tiaojian = ''] = comment.match(/\[{2}(.+)\]{2}/) || [] // 获取表达式
         const conditions = tiaojian.trim() ? tiaojian.split('|').map(i => i.trim()) : []
 
         switch (ast.type) {
@@ -26,7 +32,13 @@ export function toJSON(str) {
                 let [type] = conditions
                 if (type === 'random') {
                     const repeat = Math.round(Math.random() * 30 + 1)
-                    return '我是随机string'.repeat(repeat)
+                    return '我是随机string1234'.repeat(repeat)
+                }
+                if (type === 'img') {
+                    return uuid()
+                }
+                if (type === '+' && currentIndex !== undefined) {
+                    return `${currentIndex}`
                 }
                 if (type === 'id') {
                     return uuid()
@@ -38,9 +50,16 @@ export function toJSON(str) {
                 if (type === 'random' && isNum(maxNum)) {
                     return Math.round(Number(maxNum) * Math.random())
                 }
+                if (type === '+' && currentIndex !== undefined) {
+                    return currentIndex
+                }
                 return Number(ast.value.raw)
             }
             case 'bool': {
+                const [type] = conditions
+                if (type === 'random') {
+                    return Math.random() > .5 ? false : true
+                }
                 return ast.value.raw === 'false' ? false : true
             }
             case 'array': {
@@ -50,26 +69,23 @@ export function toJSON(str) {
                     return []
                 }
 
+                let arr = ast.children
+
                 if (type === 'random' && isNum(maxNum)) {
                     const repeatNum = Math.round(Number(maxNum) * Math.random())
 
-                    return Array.from({ length: repeatNum })
-                        .fill(ast.children[0])
-                        .map(item => run(item.value))
+                    arr = Array.from({ length: repeatNum }).fill(ast.children[0])
+                } else if (isNum(type)) {
+                    arr = Array.from({ length: Number(type) }).fill(ast.children[0])
                 }
 
-                if (isNum(type)) {
-                    return Array.from({ length: Number(type) })
-                        .fill(ast.children[0])
-                        .map(item => run(item.value))
-                }
-
-                return ast.children.map(item => run(item.value))
+                // 数组元素也应当从 item上读取注释，而非item.value上读取
+                return arr.map((item, index) => run(item.value, item, index))
             }
             case 'object': {
                 const obj = {}
                 ast.children.map(item => {
-                    obj[item.key.value] = run(item.value, item)
+                    obj[item.key.value] = run(item.value, item, currentIndex)
                 })
 
                 return obj
