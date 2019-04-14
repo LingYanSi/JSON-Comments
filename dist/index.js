@@ -1,5 +1,9 @@
 'use strict';
 
+function _toArray(arr) { return _arrayWithHoles(arr) || _iterableToArray(arr) || _nonIterableRest(); }
+
+function _iterableToArray(iter) { if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter); }
+
 function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
 
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
@@ -236,6 +240,7 @@ function tokenizer() {
       tokens.push({
         type: 'null',
         index: index,
+        value: null,
         raw: nullResult
       });
       index += nullResult.length;
@@ -251,6 +256,7 @@ function tokenizer() {
       tokens.push({
         type: 'bool',
         index: index,
+        value: boolResult === 'true',
         raw: boolResult
       });
       index += boolResult.length;
@@ -266,6 +272,7 @@ function tokenizer() {
       tokens.push({
         type: 'number',
         index: index,
+        value: Number(numberResult),
         raw: numberResult
       });
       index += numberResult.length;
@@ -581,17 +588,127 @@ var getType = function getType(item) {
 function uuid() {
   var len = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 8;
   var S = 'qwertyuioopasdfghjklzxcvbnmQWERTYUIOOPASDFGHJKLZXCVBNM0123456789';
-  var LEN = S.length - 1;
+  var LEN = S.length;
   return ' '.repeat(len).split('').map(function () {
-    return S[Math.round(Math.random() * LEN)];
+    return S[Math.floor(Math.random() * LEN)];
   }).join('');
+}
+
+function isNum(any) {
+  return /^\d+$/.test(any);
+}
+
+function defaultPlugin(ast$$1, conditions, currentIndex) {
+  var _conditions = _toArray(conditions),
+      type = _conditions[0],
+      option = _conditions.slice(1);
+
+  switch (ast$$1.type) {
+    case 'string':
+      {
+        if (type === 'random') {
+          var repeat = Math.round(Math.random() * 30 + 1);
+          return '我是随机string1234'.repeat(repeat);
+        }
+
+        if (type === 'img') {
+          return '/xxx/xxx/xxxxxx';
+        }
+
+        if (type === '+' && currentIndex !== undefined) {
+          var initNum = realValue(option[0], ast$$1.value.value);
+          return "".concat(currentIndex + (Number(initNum) || 0));
+        }
+
+        if (type === 'id') {
+          return uuid();
+        }
+
+        break;
+      }
+
+    case 'number':
+      {
+        var _option = _slicedToArray(option, 1),
+            maxNum = _option[0];
+
+        if (type === 'random' && isNum(maxNum)) {
+          return Math.round(Number(maxNum) * Math.random());
+        }
+
+        if (['+', 'id'].includes(type) && currentIndex !== undefined) {
+          var _initNum = realValue(option[0], ast$$1.value.value);
+
+          return currentIndex + (Number(_initNum) || 0);
+        }
+      }
+
+    case 'bool':
+      {
+        if (type === 'random') {
+          return Math.random() > .5 ? false : true;
+        }
+      }
+
+    case 'array':
+      {
+        var _option2 = _slicedToArray(option, 1),
+            _maxNum = _option2[0];
+
+        if (type === 'random' && isNum(_maxNum)) {
+          var repeatNum = Math.round(Number(_maxNum) * Math.random());
+          return Array.from({
+            length: repeatNum
+          }).fill(ast$$1.children[0]);
+        } else if (isNum(type)) {
+          return Array.from({
+            length: Number(type)
+          }).fill(ast$$1.children[0]);
+        }
+      }
+
+    default:
+      break;
+  }
+} // 处理注释，也方便添加plugin
+
+
+function handleCommentSyntax() {
+  var plugins = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+  var ast$$1 = arguments.length > 1 ? arguments[1] : undefined;
+  var conditions = arguments.length > 2 ? arguments[2] : undefined;
+  var currentIndex = arguments.length > 3 ? arguments[3] : undefined;
+  var value;
+  plugins.some(function (fn) {
+    if (typeof fn === 'function') {
+      value = fn(ast$$1, conditions, currentIndex);
+    }
+
+    return value !== undefined;
+  });
+  return value;
+}
+
+function realValue() {
+  for (var _len2 = arguments.length, values = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+    values[_key2] = arguments[_key2];
+  }
+
+  return values.find(function (i) {
+    return i !== undefined;
+  });
 } // 字符串转JSON
 
 
 function toJSON(str) {
-  function isNum(any) {
-    return /^\d+$/.test(any);
-  }
+  var option = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  var plugins = [option.plugin, defaultPlugin];
+  /**
+   * @param {*} ast
+   * @param {*} keyValueNode 指对象中的每个keyValue节点，对象上这个字段的注释应该从keyValueNode的comments上读取
+   * @param {number} currentIndex 当前元素在数组中的位置
+   * @returns
+   */
 
   function run(ast$$1, keyValueNode, currentIndex) {
     var comment = getComments(keyValueNode || ast$$1);
@@ -605,92 +722,37 @@ function toJSON(str) {
     var conditions = tiaojian.trim() ? tiaojian.split('|').map(function (i) {
       return i.trim();
     }) : [];
+    var type = ast$$1.type;
 
-    switch (ast$$1.type) {
+    switch (type) {
       case 'null':
         {
-          return null;
+          return ast$$1.value.value;
         }
 
       case 'string':
         {
-          var _conditions = _slicedToArray(conditions, 1),
-              type = _conditions[0];
-
-          if (type === 'random') {
-            var repeat = Math.round(Math.random() * 30 + 1);
-            return '我是随机string1234'.repeat(repeat);
-          }
-
-          if (type === 'img') {
-            return uuid();
-          }
-
-          if (type === '+' && currentIndex !== undefined) {
-            return "".concat(currentIndex);
-          }
-
-          if (type === 'id') {
-            return uuid();
-          }
-
-          return ast$$1.value.value;
+          return realValue(handleCommentSyntax(plugins, ast$$1, conditions, currentIndex), ast$$1.value.value);
         }
 
       case 'number':
         {
-          var _conditions2 = _slicedToArray(conditions, 2),
-              _type = _conditions2[0],
-              maxNum = _conditions2[1];
-
-          if (_type === 'random' && isNum(maxNum)) {
-            return Math.round(Number(maxNum) * Math.random());
-          }
-
-          if (_type === '+' && currentIndex !== undefined) {
-            console.log(currentIndex);
-            return currentIndex;
-          }
-
-          return Number(ast$$1.value.raw);
+          return realValue(handleCommentSyntax(plugins, ast$$1, conditions, currentIndex), ast$$1.value.value);
         }
 
       case 'bool':
         {
-          var _conditions3 = _slicedToArray(conditions, 1),
-              _type2 = _conditions3[0];
-
-          if (_type2 === 'random') {
-            return Math.random() > .5 ? false : true;
-          }
-
-          return ast$$1.value.raw === 'false' ? false : true;
+          return realValue(handleCommentSyntax(plugins, ast$$1, conditions, currentIndex), ast$$1.value.value);
         }
 
       case 'array':
         {
-          var _conditions4 = _slicedToArray(conditions, 2),
-              _type3 = _conditions4[0],
-              _maxNum = _conditions4[1];
-
           if (!ast$$1.children.length) {
             return [];
-          }
+          } // 数组元素也应当从 item上读取注释，而非item.value上读取
 
-          var arr = ast$$1.children;
 
-          if (_type3 === 'random' && isNum(_maxNum)) {
-            var repeatNum = Math.round(Number(_maxNum) * Math.random());
-            arr = Array.from({
-              length: repeatNum
-            }).fill(ast$$1.children[0]);
-          } else if (isNum(_type3)) {
-            arr = Array.from({
-              length: Number(_type3)
-            }).fill(ast$$1.children[0]);
-          }
-
-          return arr.map(function (item, index) {
+          return realValue(handleCommentSyntax(plugins, ast$$1, conditions, currentIndex), ast$$1.children).map(function (item, index) {
             return run(item.value, item, index);
           });
         }

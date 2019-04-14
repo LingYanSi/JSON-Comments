@@ -197,6 +197,7 @@ export function tokenizer(str = '') {
             tokens.push({
                 type: 'null',
                 index,
+                value: null,
                 raw: nullResult,
             })
             index += nullResult.length
@@ -208,6 +209,7 @@ export function tokenizer(str = '') {
             tokens.push({
                 type: 'bool',
                 index,
+                value: boolResult === 'true',
                 raw: boolResult,
             })
             index += boolResult.length
@@ -219,6 +221,7 @@ export function tokenizer(str = '') {
             tokens.push({
                 type: 'number',
                 index,
+                value: Number(numberResult),
                 raw: numberResult,
             })
             index += numberResult.length

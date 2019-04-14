@@ -11,7 +11,7 @@ export const getValue = item => {
     return ''
 }
 
-// 获取节点类型
+// 获取节点类型，如果数组是一个混合类型的数组呢？不考虑这种情况
 export const getType = item => {
     if (item.type === 'array' && item.children[0]) {
         return `array: \\[${item.children[0].value.type}\\]`

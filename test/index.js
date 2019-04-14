@@ -1,26 +1,27 @@
 const { toJSON, testComments } = require('../dist/');
 
-console.log(toJSON)
-
+console.log('测试注释')
 console.log(
-    toJSON(`
+    JSON.stringify(
+toJSON(`
 {
     "num": 1,
     "isLove": false,
     "info": null,
-    "obj": [ // 
-        "111" // [[random]]
+    "obj": [ //
+        "111" // [[random]] 随机字符串
     ],
     // 神经了吗？
-    "list": [ // 11111[[11]]
+    "list": [ // [[11]] 指定数组长度
         {
-            "tiny": 1.222, // [[random|100]]
-            "age": 18,
-            "id": 1, // [[+]]
+            "tiny": 1.222, // [[random|100]] 随机数值
+            "id": "", // [[id]]
+            "img": "", // [[img]] 随机图片
+            "num": 10, // [[+]] 自增数值，也可以用来做number类型的id
         }
     ]
 }
-`))
+`), null, 4))
 
 console.log('测试注释',
 testComments(`
