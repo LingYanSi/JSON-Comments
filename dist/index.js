@@ -574,7 +574,7 @@ var getValue = function getValue(item) {
   }
 
   return '';
-}; // 获取节点类型
+}; // 获取节点类型，如果数组是一个混合类型的数组呢？不考虑这种情况
 
 
 var getType = function getType(item) {
@@ -584,6 +584,12 @@ var getType = function getType(item) {
 
   return item.type;
 };
+/**
+ * 返回随机字符串
+ * @param {number} [len=8]
+ * @returns {string}
+ */
+
 
 function uuid() {
   var len = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 8;
@@ -593,10 +599,40 @@ function uuid() {
     return S[Math.floor(Math.random() * LEN)];
   }).join('');
 }
+/**
+ * 判断是不是纯数字
+ * @param {*} any
+ * @returns
+ */
+
 
 function isNum(any) {
   return /^\d+$/.test(any);
 }
+/**
+ * 获取非undefined值
+ * @param {*} values
+ * @returns
+ */
+
+
+function realValue() {
+  for (var _len2 = arguments.length, values = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+    values[_key2] = arguments[_key2];
+  }
+
+  return values.find(function (i) {
+    return i !== undefined;
+  });
+}
+/**
+ * 默认注释语法处理
+ * @param {object} ast
+ * @param {array} conditions
+ * @param {number} currentIndex
+ * @returns
+ */
+
 
 function defaultPlugin(ast$$1, conditions, currentIndex) {
   var _conditions = _toArray(conditions),
@@ -678,7 +714,8 @@ function handleCommentSyntax() {
   var ast$$1 = arguments.length > 1 ? arguments[1] : undefined;
   var conditions = arguments.length > 2 ? arguments[2] : undefined;
   var currentIndex = arguments.length > 3 ? arguments[3] : undefined;
-  var value;
+  var value; // 如果某个plugin返回了值，就不会继续往下执行
+
   plugins.some(function (fn) {
     if (typeof fn === 'function') {
       value = fn(ast$$1, conditions, currentIndex);
@@ -687,16 +724,6 @@ function handleCommentSyntax() {
     return value !== undefined;
   });
   return value;
-}
-
-function realValue() {
-  for (var _len2 = arguments.length, values = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-    values[_key2] = arguments[_key2];
-  }
-
-  return values.find(function (i) {
-    return i !== undefined;
-  });
 } // 字符串转JSON
 
 
@@ -719,9 +746,11 @@ function toJSON(str) {
         tiaojian = _ref12$ === void 0 ? '' : _ref12$; // 获取表达式
 
 
-    var conditions = tiaojian.trim() ? tiaojian.split('|').map(function (i) {
+    var conditions = tiaojian.split('|').map(function (i) {
       return i.trim();
-    }) : [];
+    }).filter(function (i) {
+      return i;
+    });
     var type = ast$$1.type;
 
     switch (type) {
@@ -834,9 +863,8 @@ function testComments(str, option) {
             throw new Error("".concat(key, "\u6570\u7EC4\u4E0D\u80FD\u4E3A\u7A7A"));
           }
 
-          return ast$$1.children.every(function (item) {
-            return run(item.value, '', chainKey + '[0]');
-          });
+          var item = ast$$1.children[0];
+          return run(item.value, '', chainKey + '[0]');
         }
 
       case 'object':

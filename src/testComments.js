@@ -12,9 +12,9 @@ export function testComments(str, option) {
                 if (ast.children.length == 0) {
                     throw new Error(`${key}数组不能为空`)
                 }
-                return ast.children.every(item => {
-                    return run(item.value, '', chainKey + '[0]')
-                })
+
+                const item = ast.children[0];
+                return run(item.value, '', chainKey + '[0]')
             }
             case 'object': {
                 // 处理特殊的
