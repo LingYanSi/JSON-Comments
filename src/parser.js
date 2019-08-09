@@ -333,14 +333,14 @@ export function ast(tokens = []) {
         return
     }
 
-    function getAny(keyNode) {
+    function getAny(keyNode, comments) {
         const token = getOffset()
         if (['null', 'number', 'bool', 'string'].includes(token.type)) {
             index += 1
             return {
                 type: token.type,
                 value: token,
-                comments: [],
+                comments: comments || [],
             }
         }
 
@@ -442,7 +442,7 @@ export function ast(tokens = []) {
                 return ele
             }
 
-            item.value = getAny()
+            item.value = getAny(item, item.comments)
             ele.children.push(item)
 
             const nextToken = previewOffset()

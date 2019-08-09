@@ -418,7 +418,7 @@ function ast() {
     return;
   }
 
-  function getAny(keyNode) {
+  function getAny(keyNode, comments) {
     var token = getOffset();
 
     if (['null', 'number', 'bool', 'string'].includes(token.type)) {
@@ -426,7 +426,7 @@ function ast() {
       return {
         type: token.type,
         value: token,
-        comments: []
+        comments: comments || []
       };
     }
 
@@ -527,7 +527,7 @@ function ast() {
         return ele;
       }
 
-      item.value = getAny();
+      item.value = getAny(item, item.comments);
       ele.children.push(item);
       var nextToken = previewOffset();
 
@@ -902,8 +902,99 @@ function testComments(str, option) {
   var tokens = tokenizer(str);
   var astResult = ast(tokens);
   return run(astResult);
+} // 代码运行时，进行插入
+// 代码生成完毕后，在指定位置插入
+// 代码行列位置，在ast上进行记录
+
+
+var IDENT = 4;
+
+function addPrevSpace(deep) {
+  for (var _len3 = arguments.length, allStrs = new Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
+    allStrs[_key3 - 1] = arguments[_key3];
+  }
+
+  return " ".repeat(deep * IDENT) + allStrs.filter(function (i) {
+    return typeof i === 'string';
+  }).join('');
+}
+
+function wrapCommentsInfo(node, deep, str) {
+  var len = node.comments.length;
+  var allComments = node.comments.map(function (i) {
+    return i.value;
+  }).map(function (i) {
+    return i.trim();
+  }).join('\n').split('\n').map(function (i) {
+    return i.trim();
+  }).join('\n' + addPrevSpace(deep));
+  var lines = allComments.split('\n').length;
+
+  if (len == 0) {
+    return str;
+  } else if (!['array', 'object'].includes(node.value.type) && len == 1 && lines == 1) {
+    return str + ' // ' + allComments;
+  }
+
+  return addPrevSpace(deep) + ['/* ', allComments, ' */'].join('') + '\n' + str;
+}
+/**
+ * 格式化 根据AST节点对缩进进行处理，核心意义在于保留注释
+ * @param {*} ast
+ */
+
+
+function format(str) {
+  var tokens = tokenizer(str);
+  var astResult = ast(tokens);
+
+  var next = function next(node) {
+    var deep = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+    var option = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    var _option$ident = option.ident,
+        ident = _option$ident === void 0 ? true : _option$ident;
+
+    if (node.type == 'object') {
+      var childrenStr = node.children.map(function (child, index) {
+        return next(child, deep + 1, {
+          needDot: index !== node.children.length - 1
+        });
+      }).join('\n');
+      return [addPrevSpace(ident ? deep : 0, '{'), '\n', childrenStr, '\n', addPrevSpace(deep, '}')].join('') + (option.needDot ? ',' : '');
+    } else if (node.type == 'array') {
+      var _childrenStr = node.children.map(function (child, index) {
+        return next(child.value, deep + 1, {
+          needDot: index !== node.children.length - 1
+        });
+      }).join('\n');
+
+      return [addPrevSpace(ident ? deep : 0, '['), '\n', _childrenStr, '\n', addPrevSpace(deep, ']')].join('') + (option.needDot ? ',' : '');
+    } else if (node.key) {
+      var newDeep = ['object', 'array'].includes(node.value.type) ? deep : deep + 1; // 次元素不要ident
+
+      var item = ["\"".concat(node.key.value, "\""), next(node.value, newDeep, {
+        ident: false
+      })].join(': '); // 首先有看有几条注释，如果只有一条注释的话，就放在末尾，其他都放在顶部
+      // 如果对应值是对象 或者 数组，放在顶部
+
+      return wrapCommentsInfo(node, deep, addPrevSpace(deep, item, option.needDot && ','));
+    } else {
+      var value = node.value.value;
+
+      if (node.type == 'string') {
+        value = "\"".concat(value, "\"");
+      }
+
+      var _newDeep = ident ? deep : 0;
+
+      return wrapCommentsInfo(node, _newDeep, addPrevSpace(_newDeep, "".concat(value), option.needDot && ','));
+    }
+  };
+
+  return next(astResult);
 }
 
 exports.toJSON = toJSON;
 exports.toReadme = toReadme;
 exports.testComments = testComments;
+exports.format = format;
